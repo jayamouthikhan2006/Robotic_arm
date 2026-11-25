@@ -1,0 +1,1059 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AR4 6-Axis Robotic Arm Â· 3D Capstone Showcase â€” SENTRA-X</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23070b12'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%2338bdf8' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%2338bdf8'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #070b12;
+      --panel: rgba(12, 19, 30, 0.72);
+      --panel-border: rgba(125, 211, 252, 0.16);
+      --panel-hover: rgba(20, 31, 48, 0.88);
+      --text: #f1f5f9;
+      --text-dim: #94a3b8;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.35);
+      --amber: #f59e0b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    }
+
+    body.theme-studio {
+      --bg: #eef2f7;
+      --panel: rgba(255, 255, 255, 0.78);
+      --panel-border: rgba(15, 23, 42, 0.12);
+      --panel-hover: rgba(255, 255, 255, 0.94);
+      --text: #0f172a;
+      --text-dim: #475569;
+      --accent: #0284c7;
+      --accent-glow: rgba(2, 132, 199, 0.25);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    #canvas-wrap {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      outline: none;
+    }
+    canvas:active { cursor: grabbing; }
+
+    /* Glass HUD */
+    .glass {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
+      transition: background 0.25s ease, border-color 0.25s ease, opacity 0.25s ease;
+    }
+
+    .hud-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    body.hud-hidden .hud-layer { opacity: 0; }
+    body.hud-hidden #hud-restore { opacity: 1; pointer-events: auto; }
+
+    /* Top Left Identity Card */
+    .brand-card {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      pointer-events: auto;
+      max-width: 360px;
+    }
+
+    .brand-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.4;
+    }
+
+    .spec-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .spec-chip {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(148, 163, 184, 0.12);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      color: var(--text-dim);
+    }
+
+    /* Top Right Studio Controls */
+    .studio-card {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 248px;
+    }
+
+    .ctrl-group-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .pill-btn {
+      appearance: none;
+      border: 1px solid var(--panel-border);
+      background: rgba(148, 163, 184, 0.08);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.16s ease;
+    }
+
+    .pill-btn:hover {
+      background: rgba(56, 189, 248, 0.14);
+      border-color: var(--accent);
+    }
+
+    .pill-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    .swatch {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      display: inline-block;
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding-top: 2px;
+    }
+
+    /* Bottom Camera Dock */
+    .cam-dock {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 7px;
+      border-radius: 16px;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: nowrap;
+      max-width: calc(100vw - 32px);
+      overflow-x: auto;
+    }
+
+    .view-btn {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-dim);
+      font-family: var(--font);
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.16s ease;
+    }
+
+    .view-btn:hover {
+      color: var(--text);
+      background: rgba(148, 163, 184, 0.12);
+    }
+
+    .view-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+
+    .view-key {
+      font-family: var(--mono);
+      font-size: 10px;
+      opacity: 0.72;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(148, 163, 184, 0.16);
+    }
+    .view-btn.active .view-key {
+      background: rgba(255, 255, 255, 0.22);
+      opacity: 1;
+    }
+
+    .dock-sep {
+      width: 1px;
+      height: 22px;
+      background: var(--panel-border);
+      margin: 0 3px;
+      flex-shrink: 0;
+    }
+
+    /* Bottom-left Part Inspector Readout */
+    .part-readout {
+      position: absolute;
+      bottom: 22px;
+      left: 20px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      pointer-events: auto;
+      font-size: 12px;
+      min-width: 220px;
+      max-width: 300px;
+    }
+
+    .part-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+    }
+
+    .part-name {
+      font-weight: 700;
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .part-meta {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* Bottom-right Controls Hint */
+    .hint-card {
+      position: absolute;
+      bottom: 22px;
+      right: 20px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 11.5px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      pointer-events: auto;
+    }
+    .hint-card strong { color: var(--text); font-weight: 600; }
+
+    /* Restore HUD button when hidden */
+    #hud-restore {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      transition: opacity 0.2s ease;
+    }
+
+    /* Loading Overlay */
+    #loader-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: var(--bg);
+      transition: opacity 0.45s ease, visibility 0.45s ease;
+    }
+    #loader-overlay.done {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 3px solid rgba(56, 189, 248, 0.16);
+      border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loader-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .loader-sub {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-dim);
+      max-width: 480px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 9px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    @media (max-width: 960px) {
+      .part-readout, .hint-card { display: none; }
+      .brand-card { max-width: 260px; padding: 11px 14px; }
+      .studio-card { min-width: 210px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-wrap"></div>
+
+  <div id="loader-overlay">
+    <div class="spinner"></div>
+    <div class="loader-title">Loading Annin AR4 6-Axis Robot Assemblyâ€¦</div>
+    <div class="loader-sub" id="loader-status">Initializing WebGL PBR studio &amp; precision CAD geometry</div>
+  </div>
+
+  <button id="hud-restore" class="glass" type="button" title="Show HUD (H)">Show HUD (H)</button>
+
+  <div class="hud-layer">
+    <!-- Top Left: Capstone Project Title -->
+    <div class="brand-card glass">
+      <div class="brand-eyebrow"><span class="pulse-dot"></span> SENTRA-X CAPSTONE Â· 3D CAD VIEWER</div>
+      <div class="brand-title">Annin AR4 6-Axis Robotic Arm</div>
+      <div class="brand-sub">Interactive CAD visualization mounted on precision calibration floor</div>
+      <div class="spec-row">
+        <span class="spec-chip">77 CAD Solids</span>
+        <span class="spec-chip">6 DOF Stepper</span>
+        <span class="spec-chip">330 Ã— 190 Ã— 363 mm</span>
+      </div>
+      
+    </div>
+
+    <!-- Top Right: Studio & Material Controls -->
+    <div class="studio-card glass">
+      <div>
+        <div class="ctrl-group-label">Finish / Colorway</div>
+        <div class="pill-row" id="colorway-pills">
+          <button class="pill-btn active" data-colorway="cobalt" type="button"><span class="swatch" style="background:#1c57db"></span>Cobalt</button>
+          <button class="pill-btn" data-colorway="titanium" type="button"><span class="swatch" style="background:#475569"></span>Titanium</button>
+          <button class="pill-btn" data-colorway="kuka" type="button"><span class="swatch" style="background:#f97316"></span>Robotics</button>
+          <button class="pill-btn" data-colorway="pearl" type="button"><span class="swatch" style="background:#e2e8f0"></span>Lab White</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="ctrl-group-label">Lighting Stage</div>
+        <div class="pill-row" id="stage-pills">
+          <button class="pill-btn active" data-stage="obsidian" type="button">Obsidian Lab</button>
+          <button class="pill-btn" data-stage="studio" type="button">Clean Studio</button>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="pill-btn active" id="btn-autorotate" type="button">âŸ³ Auto-Rotate</button>
+        <button class="pill-btn active" id="btn-floorgrid" type="button">âŠž Floor Grid</button>
+        <button class="pill-btn" id="btn-edges" type="button">â—‡ CAD Edges</button>
+        <button class="pill-btn" id="btn-shot" type="button">ðŸ“· Save PNG</button>
+      </div>
+    </div>
+
+    <!-- Bottom Left: Part Inspector -->
+    <div class="part-readout glass">
+      <div class="part-label" id="part-role">CAD PART INSPECTOR</div>
+      <div class="part-name" id="part-name">Hover or click any component</div>
+      <div class="part-meta" id="part-meta">Drag to rotate Â· Scroll to zoom Â· Right-drag to pan</div>
+    </div>
+
+    <!-- Bottom Center: Camera Views -->
+    <div class="cam-dock glass" id="cam-dock">
+      <button class="view-btn active" data-view="iso" type="button">Isometric <span class="view-key">1</span></button>
+      <button class="view-btn" data-view="front" type="button">Front View <span class="view-key">2</span></button>
+      <button class="view-btn" data-view="top" type="button">Top View <span class="view-key">3</span></button>
+      <button class="view-btn" data-view="side" type="button">Side View <span class="view-key">4</span></button>
+      <div class="dock-sep"></div>
+      <button class="view-btn" data-view="reset" type="button">Reset <span class="view-key">R</span></button>
+      <button class="view-btn" id="btn-hide-hud" type="button" title="Toggle HUD (H)">Clean View <span class="view-key">H</span></button>
+    </div>
+
+    <!-- Bottom Right: Navigation Hint -->
+    <div class="hint-card glass">
+      <div><strong>Left Drag</strong> Â· Orbit 360Â°</div>
+      <div><strong>Scroll</strong> Â· Zoom in / out</div>
+      <div><strong>Right Drag</strong> Â· Pan camera</div>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    const wrap = document.getElementById('canvas-wrap');
+    const loaderOverlay = document.getElementById('loader-overlay');
+    const loaderStatus = document.getElementById('loader-status');
+
+    if (location.protocol === 'file:') {
+      loaderStatus.innerHTML =
+        'Local web server required to load 3D CAD assets.<br/>Run <code>node serve.mjs</code> in <code>SENTRA-X</code> and open <code>http://localhost:3456/ar4-showcase.html</code>.';
+    }
+
+    // ---------- Renderer ----------
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: true,
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    wrap.appendChild(renderer.domElement);
+
+    // ---------- Scene & Studio Environment ----------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070b12);
+    scene.fog = new THREE.FogExp2(0x070b12, 0.036);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = envTex;
+    scene.environmentIntensity = 0.85;
+
+    // ---------- Camera & OrbitControls ----------
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.05, 120);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.065;
+    controls.rotateSpeed = 0.85;
+    controls.zoomSpeed = 0.9;
+    controls.panSpeed = 0.75;
+    controls.minDistance = 1.8;
+    controls.maxDistance = 16.0;
+    controls.maxPolarAngle = Math.PI / 2 - 0.015; // keep camera above floor
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 1.15;
+
+    // ---------- Studio 3-Point Lighting ----------
+    const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x0f172a, 0.55);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfff7ed, 2.35);
+    keyLight.position.set(5.5, 8.5, 5.2);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.near = 1;
+    keyLight.shadow.camera.far = 22;
+    const sExt = 3.2;
+    keyLight.shadow.camera.left = -sExt;
+    keyLight.shadow.camera.right = sExt;
+    keyLight.shadow.camera.top = sExt;
+    keyLight.shadow.camera.bottom = -sExt;
+    keyLight.shadow.bias = -0.0004;
+    keyLight.shadow.normalBias = 0.02;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0x7dd3fc, 0.95);
+    fillLight.position.set(-5.8, 3.8, 2.5);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xbae6fd, 1.35);
+    rimLight.position.set(-2.2, 5.2, -6.5);
+    scene.add(rimLight);
+
+    // ---------- Precision Architectural Floor & Calibration Pad ----------
+    function createCalibrationTexture(isDark) {
+      const size = 2048;
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const g = c.getContext('2d');
+      const cx = size / 2;
+      const cy = size / 2;
+
+      g.clearRect(0, 0, size, size);
+
+      // Subtle concentric pad glow
+      const bgGrad = g.createRadialGradient(cx, cy, 40, cx, cy, size * 0.48);
+      if (isDark) {
+        bgGrad.addColorStop(0.0, 'rgba(30, 58, 95, 0.34)');
+        bgGrad.addColorStop(0.55, 'rgba(15, 28, 46, 0.22)');
+        bgGrad.addColorStop(1.0, 'rgba(7, 11, 18, 0.0)');
+      } else {
+        bgGrad.addColorStop(0.0, 'rgba(203, 213, 225, 0.48)');
+        bgGrad.addColorStop(0.55, 'rgba(226, 232, 240, 0.26)');
+        bgGrad.addColorStop(1.0, 'rgba(238, 242, 247, 0.0)');
+      }
+      g.fillStyle = bgGrad;
+      g.beginPath();
+      g.arc(cx, cy, size * 0.49, 0, Math.PI * 2);
+      g.fill();
+
+      const strokeMain = isDark ? 'rgba(56, 189, 248, 0.45)' : 'rgba(2, 132, 199, 0.45)';
+      const strokeSoft = isDark ? 'rgba(148, 163, 184, 0.20)' : 'rgba(51, 65, 85, 0.18)';
+      const strokeTick = isDark ? 'rgba(148, 163, 184, 0.38)' : 'rgba(51, 65, 85, 0.36)';
+
+      // Concentric metric reach rings (100, 200, 300, 380 mm)
+      const radii = [0.145, 0.265, 0.375, 0.465];
+      radii.forEach((rf, idx) => {
+        g.strokeStyle = idx === 1 || idx === 3 ? strokeMain : strokeSoft;
+        g.lineWidth = idx === 3 ? 3 : 2;
+        if (idx === 2) g.setLineDash([12, 10]); else g.setLineDash([]);
+        g.beginPath();
+        g.arc(cx, cy, size * rf, 0, Math.PI * 2);
+        g.stroke();
+      });
+      g.setLineDash([]);
+
+      // Degree ticks around outer ring
+      const rIn = size * 0.448;
+      const rOutMinor = size * 0.460;
+      const rOutMajor = size * 0.474;
+      for (let deg = 0; deg < 360; deg += 5) {
+        const rad = (deg * Math.PI) / 180;
+        const major = deg % 45 === 0;
+        const mid = deg % 15 === 0;
+        g.strokeStyle = major ? strokeMain : strokeTick;
+        g.lineWidth = major ? 3.5 : mid ? 2 : 1.2;
+        g.beginPath();
+        g.moveTo(cx + Math.cos(rad) * rIn, cy + Math.sin(rad) * rIn);
+        const rOut = major ? rOutMajor : rOutMinor;
+        g.lineTo(cx + Math.cos(rad) * rOut, cy + Math.sin(rad) * rOut);
+        g.stroke();
+      }
+
+      // Crosshairs
+      g.strokeStyle = strokeSoft;
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(cx - size * 0.45, cy);
+      g.lineTo(cx + size * 0.45, cy);
+      g.moveTo(cx, cy - size * 0.45);
+      g.lineTo(cx, cy + size * 0.45);
+      g.stroke();
+
+      // Square mounting footprint under J1 Base (~180x180 mm)
+      const padHalf = size * 0.125;
+      g.strokeStyle = strokeMain;
+      g.lineWidth = 3;
+      g.strokeRect(cx - padHalf, cy - padHalf, padHalf * 2, padHalf * 2);
+
+      // Axis labels
+      g.fillStyle = isDark ? 'rgba(125, 211, 252, 0.72)' : 'rgba(2, 132, 199, 0.75)';
+      g.font = '600 26px "JetBrains Mono", monospace';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('FRONT (+Z)', cx, cy + size * 0.42);
+      g.fillText('REAR (-Z)', cx, cy - size * 0.42);
+      g.fillText('+X', cx + size * 0.41, cy - 22);
+      g.fillText('-X', cx - size * 0.41, cy - 22);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const floorGroup = new THREE.Group();
+    scene.add(floorGroup);
+
+    // Main studio floor receiving soft shadows
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x0b1220,
+      roughness: 0.44,
+      metalness: 0.25,
+    });
+    const floorMesh = new THREE.Mesh(new THREE.CircleGeometry(32, 128), floorMat);
+    floorMesh.rotation.x = -Math.PI / 2;
+    floorMesh.position.y = 0;
+    floorMesh.receiveShadow = true;
+    floorGroup.add(floorMesh);
+
+    // Subtle architectural grid
+    const gridHelper = new THREE.GridHelper(28, 56, 0x1e3a5f, 0x111c2d);
+    gridHelper.position.y = 0.001;
+    gridHelper.material.transparent = true;
+    gridHelper.material.opacity = 0.45;
+    floorGroup.add(gridHelper);
+
+    // Precision calibration pad directly beneath robot
+    let calTexDark = createCalibrationTexture(true);
+    let calTexLight = createCalibrationTexture(false);
+    const padMat = new THREE.MeshBasicMaterial({
+      map: calTexDark,
+      transparent: true,
+      depthWrite: false,
+    });
+    const padMesh = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 7.2), padMat);
+    padMesh.rotation.x = -Math.PI / 2;
+    padMesh.position.y = 0.0025;
+    floorGroup.add(padMesh);
+
+    // Thin physical brushed-metal pedestal ring around robot base
+    const ringMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      metalness: 0.8,
+      roughness: 0.35,
+    });
+    const baseRing = new THREE.Mesh(new THREE.RingGeometry(1.38, 1.43, 96), ringMat);
+    baseRing.rotation.x = -Math.PI / 2;
+    baseRing.position.y = 0.003;
+    floorGroup.add(baseRing);
+
+    // ---------- Robot Model Loading & Colorways ----------
+    const COLORWAYS = {
+      cobalt: {
+        housing:        { color: 0x1a56db, metalness: 0.42, roughness: 0.32 },
+        motor:          { color: 0x11161f, metalness: 0.48, roughness: 0.52 },
+        machined_steel: { color: 0xcbd5e1, metalness: 0.94, roughness: 0.22 },
+        machined_gear:  { color: 0xd9b15f, metalness: 0.90, roughness: 0.24 },
+        gripper_carbon: { color: 0x1a202c, metalness: 0.30, roughness: 0.44 },
+      },
+      titanium: {
+        housing:        { color: 0x334155, metalness: 0.72, roughness: 0.28 },
+        motor:          { color: 0x0b0f17, metalness: 0.50, roughness: 0.54 },
+        machined_steel: { color: 0xe2e8f0, metalness: 0.96, roughness: 0.18 },
+        machined_gear:  { color: 0x38bdf8, metalness: 0.78, roughness: 0.24 },
+        gripper_carbon: { color: 0x111827, metalness: 0.35, roughness: 0.42 },
+      },
+      kuka: {
+        housing:        { color: 0xf97316, metalness: 0.28, roughness: 0.34 },
+        motor:          { color: 0x14161a, metalness: 0.48, roughness: 0.52 },
+        machined_steel: { color: 0xd1d5db, metalness: 0.92, roughness: 0.22 },
+        machined_gear:  { color: 0x94a3b8, metalness: 0.90, roughness: 0.26 },
+        gripper_carbon: { color: 0x18181b, metalness: 0.28, roughness: 0.45 },
+      },
+      pearl: {
+        housing:        { color: 0xe2e8f0, metalness: 0.24, roughness: 0.28 },
+        motor:          { color: 0x1e293b, metalness: 0.48, roughness: 0.48 },
+        machined_steel: { color: 0x94a3b8, metalness: 0.92, roughness: 0.20 },
+        machined_gear:  { color: 0x2563eb, metalness: 0.65, roughness: 0.28 },
+        gripper_carbon: { color: 0x0f172a, metalness: 0.32, roughness: 0.42 },
+      },
+    };
+
+    const robotMeshes = [];
+    const cadEdgesList = [];
+    let robotCenter = new THREE.Vector3(-0.05, 1.55, 0.24);
+    let edgesVisible = false;
+
+    const ROLE_LABELS = {
+      housing: 'Structural Housing',
+      motor: 'Actuator / Stepper Motor',
+      machined_steel: 'Precision Bearing / Shaft',
+      machined_gear: 'Drive Gear / Pulley',
+      gripper_carbon: 'End-Effector Gripper',
+    };
+
+    const gltfLoader = new GLTFLoader();
+    gltfLoader.load(
+      'assets/annin-robot.glb',
+      (gltf) => {
+        const root = gltf.scene;
+        root.traverse((obj) => {
+          if (!obj.isMesh) return;
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+          obj.userData.role = obj.userData.role || obj.material?.name || 'housing';
+          obj.material = obj.material.clone();
+
+          // Optional crisp CAD silhouette edges (hidden by default)
+          const edgeGeo = new THREE.EdgesGeometry(obj.geometry, 32);
+          const edgeMat = new THREE.LineBasicMaterial({
+            color: 0x7dd3fc,
+            transparent: true,
+            opacity: 0.28,
+          });
+          const lines = new THREE.LineSegments(edgeGeo, edgeMat);
+          lines.visible = edgesVisible;
+          obj.add(lines);
+          cadEdgesList.push(lines);
+
+          robotMeshes.push(obj);
+        });
+
+        scene.add(root);
+
+        // Compute exact bounding box after placement on floor y = 0
+        const box = new THREE.Box3().setFromObject(root);
+        // Ensure bottom sits flush on y = 0.000
+        if (Math.abs(box.min.y) > 0.0005) {
+          root.position.y -= box.min.y;
+          box.setFromObject(root);
+        }
+        robotCenter = box.getCenter(new THREE.Vector3());
+
+        applyColorway('cobalt');
+        setView('iso', true);
+
+        // Apply optional URL view parameter (e.g. ?view=front&hud=0)
+        const params = new URLSearchParams(location.search);
+        const initialView = params.get('view');
+        if (initialView && VIEW_PRESETS[initialView]) {
+          controls.autoRotate = false;
+          document.getElementById('btn-autorotate').classList.remove('active');
+          setView(initialView, true);
+        }
+        if (params.get('hud') === '0') {
+          document.body.classList.add('hud-hidden');
+        }
+
+        loaderOverlay.classList.add('done');
+      },
+      (xhr) => {
+        if (xhr.total) {
+          const pct = Math.round((xhr.loaded / xhr.total) * 100);
+          loaderStatus.textContent = `Streaming CAD meshâ€¦ ${pct}%`;
+        }
+      },
+      (err) => {
+        console.error(err);
+        loaderStatus.textContent =
+          'Could not load assets/annin-robot.glb. Ensure local server is running (node serve.mjs).';
+      }
+    );
+
+    function applyColorway(key) {
+      const pal = COLORWAYS[key];
+      if (!pal) return;
+      for (const m of robotMeshes) {
+        const spec = pal[m.userData.role] || pal.housing;
+        m.material.color.setHex(spec.color);
+        m.material.metalness = spec.metalness;
+        m.material.roughness = spec.roughness;
+        m.material.needsUpdate = true;
+      }
+      document.querySelectorAll('#colorway-pills .pill-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.colorway === key);
+      });
+    }
+
+    function applyStage(stage) {
+      const isDark = stage === 'obsidian';
+      document.body.classList.toggle('theme-studio', !isDark);
+      scene.background.setHex(isDark ? 0x070b12 : 0xeef2f7);
+      scene.fog = new THREE.FogExp2(isDark ? 0x070b12 : 0xeef2f7, isDark ? 0.036 : 0.022);
+      floorMat.color.setHex(isDark ? 0x0b1220 : 0xdbe3ee);
+      floorMat.roughness = isDark ? 0.44 : 0.62;
+      floorMat.metalness = isDark ? 0.25 : 0.08;
+      ringMat.color.setHex(isDark ? 0x1e293b : 0x94a3b8);
+      padMat.map = isDark ? calTexDark : calTexLight;
+      padMat.needsUpdate = true;
+      gridHelper.material.opacity = isDark ? 0.45 : 0.26;
+      hemiLight.intensity = isDark ? 0.55 : 0.95;
+      scene.environmentIntensity = isDark ? 0.85 : 0.72;
+      document.querySelectorAll('#stage-pills .pill-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.stage === stage);
+      });
+    }
+
+    // ---------- Camera Views & Smooth Transitions ----------
+    const VIEW_PRESETS = {
+      iso:   { offset: new THREE.Vector3(4.85, 2.85, 4.65),  targetY: 1.50, targetZ: 0.22 },
+      front: { offset: new THREE.Vector3(0.0,  0.48, 7.60),  targetY: 1.62, targetZ: 0.22 },
+      top:   { offset: new THREE.Vector3(0.0,  8.40, 0.04),  targetY: 0.35, targetZ: 0.28 },
+      side:  { offset: new THREE.Vector3(7.65, 0.48, 0.0),   targetY: 1.62, targetZ: 0.26 },
+    };
+
+    let camAnim = null;
+
+    function setView(name, instant = false) {
+      const key = name === 'reset' ? 'iso' : name;
+      const preset = VIEW_PRESETS[key];
+      if (!preset) return;
+
+      const target = new THREE.Vector3(robotCenter.x, preset.targetY, preset.targetZ ?? robotCenter.z);
+      const pos = target.clone().add(preset.offset);
+
+      document.querySelectorAll('#cam-dock .view-btn[data-view]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.view === key);
+      });
+
+      if (instant) {
+        camAnim = null;
+        camera.position.copy(pos);
+        controls.target.copy(target);
+        controls.update();
+        return;
+      }
+
+      camAnim = {
+        startTime: performance.now(),
+        duration: 620,
+        fromPos: camera.position.clone(),
+        toPos: pos,
+        fromTarget: controls.target.clone(),
+        toTarget: target,
+      };
+    }
+
+    // ---------- Raycasting Part Inspector ----------
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let hoveredMesh = null;
+    let selectedMesh = null;
+
+    const partRoleEl = document.getElementById('part-role');
+    const partNameEl = document.getElementById('part-name');
+    const partMetaEl = document.getElementById('part-meta');
+
+    function setHighlight(mesh, active) {
+      if (!mesh || !mesh.material) return;
+      mesh.material.emissive.setHex(active ? 0x0ea5e9 : 0x000000);
+      mesh.material.emissiveIntensity = active ? 0.35 : 0.0;
+    }
+
+    function updateReadout(mesh) {
+      if (!mesh) {
+        partRoleEl.textContent = 'CAD PART INSPECTOR';
+        partNameEl.textContent = 'Hover or click any component';
+        partMetaEl.textContent = 'Drag to rotate Â· Scroll to zoom Â· Right-drag to pan';
+        return;
+      }
+      const role = mesh.userData.role || 'housing';
+      partRoleEl.textContent = ROLE_LABELS[role] || 'CAD Component';
+      partNameEl.textContent = mesh.name || 'Unnamed Solid';
+      const box = new THREE.Box3().setFromObject(mesh);
+      const sz = box.getSize(new THREE.Vector3()).multiplyScalar(100);
+      partMetaEl.textContent = `${sz.x.toFixed(1)} Ã— ${sz.y.toFixed(1)} Ã— ${sz.z.toFixed(1)} mm`;
+    }
+
+    let pointerDownPos = { x: 0, y: 0 };
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+      camAnim = null;
+    });
+
+    renderer.domElement.addEventListener('pointermove', (e) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(robotMeshes, false);
+      const hit = hits.length ? hits[0].object : null;
+
+      if (hit !== hoveredMesh) {
+        if (hoveredMesh && hoveredMesh !== selectedMesh) setHighlight(hoveredMesh, false);
+        hoveredMesh = hit;
+        if (hoveredMesh && hoveredMesh !== selectedMesh) setHighlight(hoveredMesh, true);
+        renderer.domElement.style.cursor = hoveredMesh ? 'pointer' : 'grab';
+        if (!selectedMesh) updateReadout(hoveredMesh);
+      }
+    });
+
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+      if (dist > 5) return; // was a camera drag
+      if (selectedMesh && selectedMesh !== hoveredMesh) setHighlight(selectedMesh, false);
+      selectedMesh = hoveredMesh;
+      if (selectedMesh) setHighlight(selectedMesh, true);
+      updateReadout(selectedMesh);
+    });
+
+    // ---------- UI Event Bindings ----------
+    document.querySelectorAll('#colorway-pills .pill-btn').forEach((btn) => {
+      btn.addEventListener('click', () => applyColorway(btn.dataset.colorway));
+    });
+
+    document.querySelectorAll('#stage-pills .pill-btn').forEach((btn) => {
+      btn.addEventListener('click', () => applyStage(btn.dataset.stage));
+    });
+
+    document.querySelectorAll('#cam-dock .view-btn[data-view]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.view;
+        if (v === 'front' || v === 'top' || v === 'side') {
+          controls.autoRotate = false;
+          document.getElementById('btn-autorotate').classList.remove('active');
+        }
+        setView(v, false);
+      });
+    });
+
+    const btnAuto = document.getElementById('btn-autorotate');
+    btnAuto.addEventListener('click', () => {
+      controls.autoRotate = !controls.autoRotate;
+      btnAuto.classList.toggle('active', controls.autoRotate);
+    });
+
+    const btnGrid = document.getElementById('btn-floorgrid');
+    btnGrid.addEventListener('click', () => {
+      const next = !gridHelper.visible;
+      gridHelper.visible = next;
+      padMesh.visible = next;
+      btnGrid.classList.toggle('active', next);
+    });
+
+    const btnEdges = document.getElementById('btn-edges');
+    btnEdges.addEventListener('click', () => {
+      edgesVisible = !edgesVisible;
+      cadEdgesList.forEach((l) => { l.visible = edgesVisible; });
+      btnEdges.classList.toggle('active', edgesVisible);
+    });
+
+    document.getElementById('btn-shot').addEventListener('click', () => {
+      renderer.render(scene, camera);
+      const url = renderer.domElement.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `annin-ar4-${Date.now()}.png`;
+      a.click();
+    });
+
+    const toggleHud = () => document.body.classList.toggle('hud-hidden');
+    document.getElementById('btn-hide-hud').addEventListener('click', toggleHud);
+    document.getElementById('hud-restore').addEventListener('click', toggleHud);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '1') setView('iso');
+      else if (e.key === '2') { controls.autoRotate = false; btnAuto.classList.remove('active'); setView('front'); }
+      else if (e.key === '3') { controls.autoRotate = false; btnAuto.classList.remove('active'); setView('top'); }
+      else if (e.key === '4') { controls.autoRotate = false; btnAuto.classList.remove('active'); setView('side'); }
+      else if (e.key.toLowerCase() === 'r') setView('reset');
+      else if (e.key.toLowerCase() === 'h') toggleHud();
+    });
+
+    // ---------- Resize & Animation Loop ----------
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      if (camAnim) {
+        const t = Math.min(1, (now - camAnim.startTime) / camAnim.duration);
+        const ease = 1 - Math.pow(1 - t, 3);
+        camera.position.lerpVectors(camAnim.fromPos, camAnim.toPos, ease);
+        controls.target.lerpVectors(camAnim.fromTarget, camAnim.toTarget, ease);
+        if (t >= 1) camAnim = null;
+      }
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
+
